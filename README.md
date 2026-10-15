@@ -87,6 +87,7 @@ Link público do dataset de avaliação (ou screenshots do dashboard): [langsmit
 - Python 3.10 ou superior
 - Conta no LangSmith e configuração do Handle público
 - Chaves de API da OpenAI ou Google AI Studio
+- (Caso for utilizar o modelo Gemini) Os modelos Gemini 2.5 não estão mais disponíveis para novos usuários, apenas para projetos legados. O seu uso nesse projeto acarreta em erros. Recomenda-se utilizar os modelos Gemini 3.1 ou 3.5.
 
 ### Configurações iniciais:
 Primeiro, é necessário criar o arquivo .env e inserir as suas credenciais, de acordo com o arquivo .env.example fornecido. Em seguida é necessário configurar o ambiente e instalar as dependências. Siga os passos abaixo:
