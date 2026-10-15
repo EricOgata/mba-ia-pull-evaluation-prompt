@@ -10,21 +10,16 @@ DICAS DE IMPLEMENTAÇÃO:
 
 - O pull é feito pelo cliente do LangSmith:
 
-      from langsmith import Client
-      client = Client()
-      prompt = client.pull_prompt(
-          "leonanluppi/bug_to_user_story_v1",
-          dangerously_pull_public_prompt=True,
-      )
+    from langsmith import Client
+    client = Client()
+    prompt = client.pull_prompt(
+        "leonanluppi/bug_to_user_story_v1",
+        dangerously_pull_public_prompt=True,
+    )
 
-- O parâmetro `dangerously_pull_public_prompt=True` é obrigatório sempre que o
-  identificador tem dono explícito ("owner/nome"). O LangSmith bloqueia esse pull
-  por padrão porque um prompt do Hub é um objeto LangChain serializado, que pode
-  vir de terceiros. Aqui o prompt é o do desafio, então o risco é conhecido.
+- O parâmetro `dangerously_pull_public_prompt=True` é obrigatório sempre que o identificador tem dono explícito ("owner/nome"). O LangSmith bloqueia esse pull por padrão porque um prompt do Hub é um objeto LangChain serializado, que pode vir de terceiros. Aqui o prompt é o do desafio, então o risco é conhecido.
 
-- O retorno é um ChatPromptTemplate. Para extrair o conteúdo das mensagens,
-  use a serialização nativa do LangChain (`prompt.messages`, e o atributo
-  `.prompt.template` de cada mensagem).
+- O retorno é um ChatPromptTemplate. Para extrair o conteúdo das mensagens, use a serialização nativa do LangChain (`prompt.messages`, e o atributo `.prompt.template` de cada mensagem).
 
 - Use `save_yaml` de utils.py para gravar o resultado no arquivo .yml.
 """
@@ -38,14 +33,35 @@ from utils import save_yaml, check_env_vars, print_section_header
 
 load_dotenv()
 
-
 def pull_prompts_from_langsmith():
-    ...
+    if not check_env_vars(["LANGSMITH_TRACING", "LANGSMITH_API_KEY", "LANGSMITH_ENDPOINT"]):
+        return
+    client = Client()
+    prompt = client.pull_prompt(
+        "leonanluppi/bug_to_user_story_v1",
+        dangerously_pull_public_prompt=True
+    )
+    metaData = prompt.metadata
+    prompt_name = metaData['lc_hub_repo']
+    prompt_template = {}
+    messages = prompt.messages
+    for message in messages:
+        prompt_type = ""
+        match type(message).__name__:
+            case 'SystemMessagePromptTemplate':
+                prompt_type = 'system_prompt'
+            case 'HumanMessagePromptTemplate':
+                prompt_type = 'user_prompt'
+            case _:
+                continue
+        prompt_template[prompt_type] = message.prompt.template
+    save_yaml({
+        prompt_name: prompt_template
+    }, f"./prompts/{prompt_name}.yml")
 
 
 def main():
-    """Função principal"""
-    ...
+    pull_prompts_from_langsmith();
 
 
 if __name__ == "__main__":

@@ -41,13 +41,11 @@ import sys
 from dotenv import load_dotenv
 from langsmith import Client
 from langchain_core.prompts import ChatPromptTemplate
-from utils import load_yaml, check_env_vars, print_section_header
+from utils import load_yaml, check_env_vars, print_section_header, validate_prompt_structure
 
 load_dotenv()
 
-
-def push_prompt_to_langsmith(prompt_name: str, prompt_data: dict) -> bool:
-    """
+"""
     Faz push do prompt otimizado para o LangSmith Hub (PÚBLICO).
 
     Args:
@@ -56,9 +54,38 @@ def push_prompt_to_langsmith(prompt_name: str, prompt_data: dict) -> bool:
 
     Returns:
         True se sucesso, False caso contrário
-    """
-    ...
+"""
+def push_prompt_to_langsmith(prompt_name: str, prompt_data: dict) -> bool:
+    if not check_env_vars([
+        "LANGSMITH_TRACING",
+        "LANGSMITH_API_KEY",
+        "LANGSMITH_ENDPOINT",
+        "USERNAME_LANGSMITH_HUB"
+    ]):
+        return False
 
+    try:
+        systemPromp = prompt_data['system_prompt']
+        userPrompt = prompt_data['user_prompt']
+        promptTemplate = ChatPromptTemplate.from_messages([
+            ('system', systemPromp),
+            ('user', userPrompt)
+        ])
+        promptTags = prompt_data['tags'] if 'tags' in prompt_data.keys() else []
+        promptDescription = prompt_data['description'] if 'description' in prompt_data.keys() else ""
+        # print(promptTags)
+        client = Client()
+        url = client.push_prompt(
+            prompt_identifier=f"{os.getenv('USERNAME_LANGSMITH_HUB')}/{prompt_name}",
+            is_public=True,
+            object=promptTemplate,
+            description=promptDescription,
+            tags=promptTags,
+        )
+        print(url)
+        print(f"Prompt {prompt_name} enviado com sucesso! Ver mais em {url}")
+    except:
+        print('Erro ao enviar prompt.')
 
 def validate_prompt(prompt_data: dict) -> tuple[bool, list]:
     """
@@ -74,8 +101,18 @@ def validate_prompt(prompt_data: dict) -> tuple[bool, list]:
 
 
 def main():
-    """Função principal"""
-    ...
+    print_section_header("Validando prompt otimizado antes do push")
+    promptData = load_yaml("./prompts/bug_to_user_story_v2.yml")
+    validation_result = validate_prompt_structure(promptData['bug_to_user_story_v2'])
+    if not validation_result[0]:
+        print("Prompt inválido!!!!")
+        for error in validation_result[1]:
+            print(f"Erro: {error}")
+        return
+    print("Prompt válido. Prosseguindo com o push para o LangSmith Hub...")
+    print_section_header("Realizando push do prompt otimizado para o LangSmith Hub")
+
+    push_prompt_to_langsmith("bug_to_user_story_v2", promptData['bug_to_user_story_v2'])
 
 
 if __name__ == "__main__":
